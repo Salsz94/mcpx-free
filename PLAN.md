@@ -127,3 +127,13 @@ Actualización de reutilización. Se fijó Creative Editor a `1a5879173c59b736dd
 | 3. Comprobar la salida audiovisual | Renderizar los 12 segundos sintéticos y comprobar el cambio de imagen y tono alrededor de los fotogramas 120 y 210. | Orden B–A–C en imagen y audio, duración esperada y cortes sincronizados en el archivo exportado. |
 | 4. Probar recuperación y escala | Detener y reanudar el receptor en la biblioteca de pruebas, verificar el resultado antes de repetir una escritura y ensayar una respuesta superior al límite del lector. | Una sola timeline para el mismo ID. Ante una respuesta grande, lectura completa o diagnóstico explícito. Ante una importación parcial, identificar el borrador y documentar la recuperación. |
 | 5. Pilotar un video habitual | Copiar medios representativos a la biblioteca desechable. Verificar formato, FPS, audio y origen. Montar un fragmento, medir correcciones y comparar con la edición manual. Incorporar el script de subtítulos después de revisarlo con una muestra. | El usuario aprueba imagen, sonido y sincronía del render con sus propios medios. Registrar qué formatos y qué cliente pasaron antes de ampliar el uso. |
+
+## Arranque accesible desde Resolve
+
+El activador del menú Scripts reemplaza el pegado de código en el uso habitual.
+El panel local muestra actividad reciente y permite detener el receptor. Se
+verificó el arranque por menú con el operador y una consulta real por MCP. La
+simulación cubre desconexión, reconexión y configuración entre scripts aislados.
+El panel requiere Python y Tkinter. El empaquetado como exe autónomo sigue
+pendiente. Al abrir otra sesión de Resolve se vuelve a seleccionar MCPX Free
+en el menú. La sesión del panel y la del cliente MCP deben coincidir.

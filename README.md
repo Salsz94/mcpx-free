@@ -1,9 +1,37 @@
 # MCPX-Free
 
-Puente experimental para Windows. La compatibilidad medida es Resolve Free
-21.1.0.17 con Python 3.10 de 64 bits y medios sintéticos a 30 fps. Quedan
-pendientes la aceptación del montaje desde los chats de Codex y Claude, el render
-y las pruebas con medios habituales.
+Puente experimental para Windows. Se comprobó el montaje desde una conversación
+de Codex en Resolve Free 21.1.0.17, con Python 3.10 de 64 bits y medios
+sintéticos a 30 fps. El usuario confirmó la lectura del montaje después de
+reabrir el proyecto. Siguen pendientes Claude, el render y los medios habituales.
+
+## Panel y activación desde el menú
+
+Abra `launcher.pyw` con Python para mostrar el panel de escritorio. En la copia
+de desarrollo usa la sesión `.scratch/private-ipc`. Para otra sesión, inicie
+`pythonw launcher.pyw --session "C:\ruta\sesion"` o elija Cambiar sesión.
+
+Pulse **Preparar botón en Resolve** una vez. Esto instala el script
+`MCPX Free.lua` en los scripts Utility de su cuenta de Windows, apuntando a la
+copia y sesión elegidas. Si mueve el proyecto o cambia de sesión, vuelva a
+preparar el botón. El cliente MCP debe seguir apuntando a esa misma sesión.
+
+En Resolve, abra un proyecto de pruebas `MCPX-TEST-…` y seleccione
+**Workspace → Scripts → MCPX Free**. El nombre de la biblioteca y del proyecto
+se toman del proyecto de pruebas abierto. Al reiniciar Resolve seleccione de
+nuevo la entrada. Según la versión, un script recién instalado puede requerir
+reabrir el menú o reiniciar Resolve para aparecer.
+
+El panel pasa a **Puente activado** cuando recibe una señal reciente del
+receptor. Pulse el símbolo de encendido para desconectarlo. Con el receptor
+desconectado, el símbolo muestra el paso de activación en el menú de Resolve.
+Cerrar el panel deja el receptor en el estado en que se encontraba.
+
+El estado comprueba el receptor Lua. La consulta `request_inspection` seguida
+de `resolve_result` comprueba además el recorrido MCP hasta el proyecto.
+Para desinstalar la entrada, elimine únicamente `MCPX Free.lua` de
+`%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility`.
+
 
 ## Arranque desde una copia descargada
 

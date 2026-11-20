@@ -88,3 +88,23 @@ devolver un error explícito al superar 256 KiB. Pasaron siete pruebas Python,
 incluida la regresión que comprueba ese error y que el servidor continúa
 respondiendo. La paginación, el render y la instalación en otro Windows siguen
 pendientes. La publicación prevista corresponde a una versión experimental.
+
+## Panel local de activación
+
+Se añadió launcher.pyw con estado del receptor, control de desconexión y
+generación de una entrada Lua para el menú Scripts de Resolve. El instalador
+apunta a la sesión elegida y restringe el arranque a proyectos MCPX-TEST.
+La ventana se inspeccionó visualmente con la altura corregida para mostrar
+todos sus controles. Pasaron ocho pruebas Python y la simulación Lua extendida
+para parada y reconexión. Se corrigió el reconocimiento de stop con CRLF en
+Windows. El operador confirmó la activación desde el menú en Resolve Free 21.1.0.17.
+Una consulta MCP posterior devolvió el proyecto de prueba y la timeline esperados.
+El círculo del panel detuvo el receptor y este escribió el estado stopped. La ventana usa Python y Tkinter. El empaquetado como exe autónomo
+sigue pendiente.
+
+El arranque por menú reveló que los scripts no compartían las variables globales
+establecidas por el activador. Se corrigió el paso de configuración mediante
+Fusion SetData/GetData, conservando el arranque por consola. La simulación
+comprueba ahora una operación de marcador con esas variables globales ausentes.
+El acceso directo local MCPX Free.lnk abre el panel con pythonw. Ese acceso
+contiene rutas del equipo y queda excluido de Git.

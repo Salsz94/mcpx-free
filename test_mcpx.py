@@ -1,5 +1,7 @@
 from fractions import Fraction
 import json
+import runpy
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -112,6 +114,17 @@ class Fixture(TestCase):
             self.assertEqual(client.call("request_inspection")["status"], "error")
             self.assertEqual(client.call("resolve_result", request_id="a" * 32)["status"], "error")
             self.assertIn("resolve", client.call("capabilities"))
+
+    def test_panel_does_not_report_stale_or_stopped_worker_as_active(self):
+        panel = runpy.run_path(str(Path(__file__).with_name("launcher.pyw")))
+        heartbeat = self.root / "heartbeat.txt"
+        self.assertFalse(panel["heartbeat_state"](self.root))
+        heartbeat.write_text(str(int(time.time())), encoding="ascii")
+        self.assertTrue(panel["heartbeat_state"](self.root))
+        heartbeat.write_text(str(int(time.time()) - 10), encoding="ascii")
+        self.assertFalse(panel["heartbeat_state"](self.root))
+        heartbeat.write_text("stopped", encoding="ascii")
+        self.assertFalse(panel["heartbeat_state"](self.root))
 
     def test_oversized_response_is_reported_without_blocking_other_requests(self):
         for name in ("request.txt", "response.txt", "lock"):

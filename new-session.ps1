@@ -16,7 +16,7 @@ if (!$verified.AreAccessRulesProtected -or $rules.Count -ne 1 -or
     $rules[0].FileSystemRights -ne 'FullControl' -or $rules[0].AccessControlType -ne 'Allow') {
     throw 'La ACL de la sesión no coincide con la cuenta actual.'
 }
-foreach ($name in 'request.txt', 'response.txt', 'lock') {
+foreach ($name in 'request.txt', 'response.txt', 'lock', 'heartbeat.txt', 'stop.txt') {
     $slot = New-Item -ItemType File -Path (Join-Path $directory.FullName $name)
     if ($name -eq 'lock') { [System.IO.File]::WriteAllBytes($slot.FullName, [byte[]]@(0)) }
 }

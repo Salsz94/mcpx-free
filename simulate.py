@@ -100,9 +100,28 @@ def main():
                 run("MCPX_BRIDGE_SCRIPT=" + json.dumps((ROOT / "bridge.lua").as_posix()))
                 run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
                 assert result(token) == "verified_in_timeline"
+                assert (base / "heartbeat.txt").read_text().strip() == "stopped"
+                token = stage("request_test_marker", frame=123, **target)
+                (base / "stop.txt").write_text("stop\n")
+                run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
+                assert result(token) == "pending_operator", "El receptor procesó una solicitud tras desconectarse"
+                (base / "stop.txt").write_text("run\n")
                 run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
                 assert result(token) == "verified_in_timeline"
-                print("Consulta, montaje, repetición, audio ausente, marcador, colisión y proyecto obsoleto: OK")
+                run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
+                assert result(token) == "verified_in_timeline"
+                token = stage("request_test_marker", frame=124, **target)
+                for key, value in {
+                    "Directory": base.as_posix(),
+                    "BridgeScript": (ROOT / "bridge.lua").as_posix(),
+                    "TestProject": "MCPX-TEST-SIM",
+                    "TestLibrary": "scratch",
+                }.items():
+                    run("fusion:SetData(" + json.dumps("MCPX." + key) + "," + json.dumps(value) + ")")
+                run("MCPX_DIRECTORY=nil; MCPX_BRIDGE_SCRIPT=nil; MCPX_TEST_PROJECT=nil; MCPX_TEST_LIBRARY=nil")
+                run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
+                assert result(token) == "verified_in_timeline", "Fallo al compartir configuración entre scripts"
+                print("Consulta, montaje, repetición, audio ausente, marcador, colisión, reconexión y sesión compartida: OK")
     finally:
         lua.lua_close(state)
 

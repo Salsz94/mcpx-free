@@ -1,6 +1,8 @@
 -- Run once per request from the Resolve Lua console.
-local directory = assert(MCPX_DIRECTORY, "Configure MCPX_DIRECTORY first")
 local app = assert(fusion or fu)
+local directory = assert(MCPX_DIRECTORY or app:GetData("MCPX.Directory"), "Configure MCPX_DIRECTORY first")
+local testProject = MCPX_TEST_PROJECT or app:GetData("MCPX.TestProject")
+local testLibrary = MCPX_TEST_LIBRARY or app:GetData("MCPX.TestLibrary")
 local request = assert(app:OpenFile(directory .. "/request.txt", 1), "No request")
 local line
 local payload = {}
@@ -126,9 +128,9 @@ local function execute()
         return fields
     end
     assert(operation == "marker" or operation == "assemble", "Unknown operation")
-    assert(MCPX_TEST_PROJECT and project:GetName() == MCPX_TEST_PROJECT
-        and MCPX_TEST_PROJECT:match("^MCPX%-TEST%-[%w%-]+$"), "Write requires the armed disposable project")
-    assert(MCPX_TEST_LIBRARY and manager:GetCurrentDatabase().DbName == MCPX_TEST_LIBRARY,
+    assert(testProject and project:GetName() == testProject
+        and testProject:match("^MCPX%-TEST%-[%w%-]+$"), "Write requires the armed disposable project")
+    assert(testLibrary and manager:GetCurrentDatabase().DbName == testLibrary,
         "Write requires the armed disposable library")
     assert(project:GetUniqueId() == projectId, "Project changed")
     if operation == "assemble" then
