@@ -97,7 +97,7 @@ end
 local function execute()
     local resolveApp = assert(resolve or bmd.scriptapp("Resolve"), "Resolve API unavailable")
     local manager = assert(resolveApp:GetProjectManager(), "Project manager unavailable")
-    local project = assert(manager:GetCurrentProject(), "Open a test project first")
+    local project = assert(manager:GetCurrentProject(), "Open a project in Resolve first")
     local timeline = project:GetCurrentTimeline()
     local activeId = timeline and timeline:GetUniqueId() or ""
     if operation == "inspect" then

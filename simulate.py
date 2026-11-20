@@ -2,6 +2,7 @@
 import ctypes
 from fractions import Fraction
 import json
+import runpy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
@@ -135,6 +136,25 @@ def main():
                 run(dispatch)
                 assert client.call("resolve_result", request_id=req["request_id"])["status"] == "resolve_error"
                 run('assert(not resolve:GetProjectManager():GetCurrentProject():GetCurrentTimeline():GetMarkers()[4])')
+                panel = runpy.run_path(str(ROOT / "launcher.pyw"))
+                activation = panel["activation_script"](base)
+                run('local p=resolve:GetProjectManager():GetCurrentProject(); p.GetName=function() return "Customer project" end')
+                req = client.call("request_inspection")
+                run(activation)
+                actual = client.call("resolve_result", request_id=req["request_id"])
+                assert actual["project"] == "Customer project", "Un proyecto normal bloqueó el arranque"
+                assert panel["worker_context"](base) == ("Customer project", "read")
+                req = client.call("request_test_marker", **target, frame=200)
+                run(dispatch)
+                assert client.call("resolve_result", request_id=req["request_id"])["status"] == "resolve_error"
+                run('local p=resolve:GetProjectManager():GetCurrentProject(); p.GetName=function() return "MCPX-TEST-SIM" end')
+                for key in ("Directory", "BridgeScript", "TestProject", "TestLibrary"):
+                    run('fusion:SetData(' + json.dumps("MCPX." + key) + ',nil)')
+                req = client.call("request_test_marker", **target, frame=201)
+                run(activation)
+                assert client.call("resolve_result", request_id=req["request_id"])["status"] == "verified_in_timeline"
+                assert panel["worker_context"](base) == ("MCPX-TEST-SIM", "test")
+                assert not (base / "worker-error.txt").read_text().strip()
                 print("Consulta, montaje, repetición, audio, marcadores, beats, colisión y reconexión: OK")
     finally:
         lua.lua_close(state)

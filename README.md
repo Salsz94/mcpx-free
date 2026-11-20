@@ -71,9 +71,10 @@ Pulse **Preparar botón en Resolve** una vez. Esto instala el script
 copia y sesión elegidas. Si mueve el proyecto o cambia de sesión, vuelva a
 preparar el botón. El cliente MCP debe seguir apuntando a esa misma sesión.
 
-En Resolve, abra un proyecto de pruebas `MCPX-TEST-…` y seleccione
-**Workspace → Scripts → MCPX Free**. El nombre de la biblioteca y del proyecto
-se toman del proyecto de pruebas abierto. Al reiniciar Resolve seleccione de
+En Resolve, abra un proyecto y seleccione **Workspace → Scripts → MCPX Free**.
+El panel identifica el proyecto abierto y muestra su modo de acceso. Los proyectos
+habituales admiten consultas. Las escrituras se habilitan al activar desde un
+proyecto de pruebas `MCPX-TEST-…`. Al reiniciar Resolve seleccione de
 nuevo la entrada. Según la versión, un script recién instalado puede requerir
 reabrir el menú o reiniciar Resolve para aparecer.
 

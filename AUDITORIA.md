@@ -128,3 +128,15 @@ lote. Se corrigió una contención real al reemplazar request.txt mientras Fusio
 lo leía, con reintentos acotados. Pasaron once pruebas Python y la simulación.
 El detector del usuario se conserva como instalación local y su código y medios
 quedan fuera del repositorio público.
+
+## Reconexión con proyectos habituales
+
+Se reprodujo que el activador rechazaba nombres de proyecto ajenos al prefijo
+MCPX-TEST antes de abrir su registro de errores. Se corrigió para iniciar también
+en proyectos habituales en modo de lectura y registrar los fallos del arranque.
+El panel muestra el proyecto actual y el modo de acceso. La simulación comprueba
+activación en un proyecto habitual, rechazo de escrituras y reactivación de un
+proyecto de pruebas después de borrar la configuración compartida. Pasaron las
+once pruebas Python y la simulación. El operador confirmó el nuevo arranque y una
+consulta MCP real identificó el proyecto habitual y su timeline activa. La
+verificación real se limitó a consultas.

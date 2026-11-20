@@ -23,12 +23,28 @@ local function stopRequested()
     stop:Close()
     return value and value:match("^stop%s*$") ~= nil
 end
+local function writeContext()
+    local r = resolve or (bmd.scriptapp and bmd.scriptapp("Resolve"))
+    local project = r and r:GetProjectManager():GetCurrentProject()
+    local name = project and project:GetName() or ""
+    local manager = r and r:GetProjectManager()
+    local library = manager and manager:GetCurrentDatabase()
+    local armed = project and name == app:GetData("MCPX.TestProject")
+        and library and library.DbName == app:GetData("MCPX.TestLibrary")
+    local encoded = name:gsub(".", function(char) return string.format("%02x", char:byte()) end)
+    local context = app:OpenFile(directory .. "/context.txt", 2)
+    if context then
+        context:WriteLine(encoded .. "|" .. (armed and "test" or "read"))
+        context:Close()
+    end
+end
 print("MCPX worker running")
 while app:GetData(key) == owner do
     if stopRequested() then break end
     if os.time() ~= lastHeartbeat then
         lastHeartbeat = os.time()
         writeStatus(tostring(lastHeartbeat))
+        pcall(writeContext)
     end
     local request = app:OpenFile(directory .. "/request.txt", 1)
     if request then
