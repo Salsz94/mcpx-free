@@ -5,6 +5,61 @@ de Codex en Resolve Free 21.1.0.17, con Python 3.10 de 64 bits y medios
 sintéticos a 30 fps. El usuario confirmó la lectura del montaje después de
 reabrir el proyecto. Siguen pendientes Claude, el render y los medios habituales.
 
+## Selección de tomas por el agente
+
+El flujo experimental combina inspección visual del material, criterio editorial
+del agente y montaje mediante el puente. El usuario indica carpeta, duración y
+contenido deseado. El agente obtiene los intervalos de las tomas elegidas.
+
+`selection.py` convierte ese plan en un catálogo de clips preparados. Requiere
+PyAV y NumPy. Aplica la rotación de los archivos, permite corregir el espejo por
+toma y añade música local continua. La música queda integrada en el audio de los
+clips preparados. Produce `manifest.json`, `selection.json`, `media/` y
+`output/` en una carpeta nueva.
+
+```powershell
+python selection.py plan.json carpeta-nueva
+```
+
+El plan contiene `fps`, `width`, `height`, `music` y `shots`. Cada toma
+incluye `path`, `start` en segundos, `frames` de salida y `mirror` opcional.
+Estos valores los determina el agente mediante su análisis. Para montar use un
+cliente MCP temporal con `smoke.py --session SESION --fixture carpeta-nueva`
+y las herramientas de previsualización, montaje y lectura.
+
+Se comprobó un montaje vertical de 12 segundos con ocho tomas y audio estéreo,
+partiendo de videos de frecuencia variable y orientación mixta. Resolve leyó
+ocho clips en V1 y ocho en A1. El agente obtuvo imágenes y transcripción mediante
+herramientas locales. La integración del análisis y preparación como herramientas
+MCP específicas sigue pendiente. Conserve los clips preparados que utiliza la
+timeline y guarde el proyecto desde Resolve.
+
+## Montaje sobre beats de un detector local
+
+Para usar un BeatDetector instalado por el operador, ejecute su motor sobre la
+música con los FPS y la ventana temporal del montaje. Guarde su análisis en una
+carpeta de trabajo. El script del usuario se ejecuta localmente y queda fuera de
+la distribución de MCPX-Free.
+
+`selection.align_to_beats(plan, analysis, max_frames)` ajusta los límites de
+las tomas a los eventos `frame` del análisis. Conserva la duración total y
+respeta el límite de duración indicado para cada toma. Devuelve un error si
+los beats disponibles no permiten cumplir esas condiciones.
+
+Después de importar el catálogo preparado, use `request_beat_markers` con los
+IDs actuales del proyecto y la timeline y una lista de fotogramas ordenados.
+Consulte `resolve_result` para confirmar `verified_beats`. La herramienta
+`request_markers` obtiene una lectura independiente para comparar los inicios
+de los clips con las marcas. Cada lote admite hasta 200 marcas en la biblioteca
+y proyecto de pruebas armados.
+
+Se comprobó un montaje de 12 segundos con ocho tomas, 23 marcas del detector y
+siete cambios de plano coincidentes con sus marcas. Los extremos del montaje
+delimitan la duración solicitada. El tempo es una estimación del detector.
+Reinicie el cliente MCP tras actualizar el servidor para descubrir herramientas
+añadidas. Una escritura de marcas parcialmente completada se puede volver a
+despachar con el mismo ID para verificar las existentes y completar el lote.
+
 ## Panel y activación desde el menú
 
 Abra `launcher.pyw` con Python para mostrar el panel de escritorio. En la copia

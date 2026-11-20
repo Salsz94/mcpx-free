@@ -110,6 +110,21 @@ local function execute()
         end
         return fields
     end
+    if operation == "markers" then
+        assert(timeline, "No active timeline")
+        local fields = {"markers", activeId}
+        local markers = timeline:GetMarkers()
+        local frames = {}
+        for frame in pairs(markers) do frames[#frames + 1] = frame end
+        table.sort(frames)
+        for _, frame in ipairs(frames) do
+            local marker = markers[frame]
+            for _, value in ipairs({frame, marker.color, marker.name, marker.duration, marker.note or ""}) do
+                fields[#fields + 1] = value
+            end
+        end
+        return fields
+    end
     if operation == "snapshot" then
         assert(timeline, "No active timeline")
         local fields = {"snapshot", project:GetUniqueId(), activeId,
@@ -127,7 +142,7 @@ local function execute()
         end
         return fields
     end
-    assert(operation == "marker" or operation == "assemble", "Unknown operation")
+    assert(operation == "marker" or operation == "assemble" or operation == "beats", "Unknown operation")
     assert(testProject and project:GetName() == testProject
         and testProject:match("^MCPX%-TEST%-[%w%-]+$"), "Write requires the armed disposable project")
     assert(testLibrary and manager:GetCurrentDatabase().DbName == testLibrary,
@@ -137,6 +152,37 @@ local function execute()
         return assemble(project, id, tonumber(frameText), activeId ~= "" and activeId or "-", timelineId)
     end
     assert(timeline and activeId == timelineId, "Active timeline changed")
+    if operation == "beats" then
+        assert(#payload > 0 and #payload <= 200, "Invalid beat count")
+        local frames = {}
+        local markers = timeline:GetMarkers()
+        local duration = timeline:GetEndFrame() - timeline:GetStartFrame()
+        local previous = -1
+        -- Validate the whole batch before placing its first marker.
+        for index, row in ipairs(payload) do
+            assert(row:match("^%d+%s*$"), "Invalid beat frame")
+            local frame = tonumber(row)
+            assert(frame > previous and frame < duration, "Beat outside timeline or unordered")
+            local marker = markers[frame]
+            assert(not marker or (marker.customData == id and marker.name == "Beat " .. index
+                and marker.color == "Blue" and marker.duration == 1), "Beat frame occupied")
+            frames[index] = frame
+            previous = frame
+        end
+        for index, frame in ipairs(frames) do
+            if not markers[frame] then
+                assert(timeline:AddMarker(frame, "Blue", "Beat " .. index,
+                    "BeatDetector", 1, id), "Beat marker creation failed")
+            end
+        end
+        local actual = timeline:GetMarkers()
+        for index, frame in ipairs(frames) do
+            local marker = actual[frame]
+            assert(marker and marker.customData == id and marker.name == "Beat " .. index
+                and marker.color == "Blue" and marker.duration == 1, "Beat marker read-back failed")
+        end
+        return {"beats", activeId, #frames, table.concat(frames, ",")}
+    end
     local frame = tonumber(frameText)
     assert(frame >= 0 and frame < timeline:GetEndFrame() - timeline:GetStartFrame(),
         "Frame outside timeline")

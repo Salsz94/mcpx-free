@@ -5,11 +5,13 @@ import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from edit import Editor
 from live import Mailbox
 from smoke import Client
+from selection import align_to_beats
 
 
 CUTS = [{"media": "B", "in": 60, "out": 180},
@@ -18,6 +20,18 @@ CUTS = [{"media": "B", "in": 60, "out": 180},
 
 
 class Fixture(TestCase):
+    def test_beat_alignment_preserves_duration_and_uses_detector_positions(self):
+        plan = {"fps": 30, "shots": [{"frames": 45}, {"frames": 45}, {"frames": 45}]}
+        analysis = {"fps": 30, "events": [{"frame": 40}, {"frame": 80}, {"frame": 100}]}
+        result = align_to_beats(plan, analysis, [60, 60, 60])
+        self.assertEqual(result["cut_frames"], [40, 80])
+        self.assertEqual(sum(shot["frames"] for shot in result["shots"]), 135)
+        self.assertEqual([shot["frames"] for shot in plan["shots"]], [45, 45, 45])
+        with self.assertRaises(ValueError):
+            align_to_beats(plan, analysis, [60, 30, 60])
+        with self.assertRaises(ValueError):
+            align_to_beats(plan, {"fps": 24, "events": []})
+
     def setUp(self):
         temp = TemporaryDirectory()
         self.addCleanup(temp.cleanup)
@@ -106,6 +120,31 @@ class Fixture(TestCase):
                          [line.split() for line in ("0 120 60 1", "120 90 30 1", "210 150 0 1")])
         self.assertEqual(ET.parse(self.root / f"MCPX-{token}.fcpxml").find(".//project").attrib["name"],
                          f"MCPX-{token}")
+
+    def test_beat_batch_rejects_invalid_frames_before_staging(self):
+        for name in ("request.txt", "response.txt", "lock"):
+            (self.root / name).write_bytes(b"0" if name == "lock" else b"")
+        mailbox = Mailbox(self.root)
+        for frames in ([True], [-1], [2, 1], [1, 1], []):
+            with self.assertRaises(ValueError):
+                mailbox.stage_beats("project", "timeline", frames)
+        self.assertEqual((self.root / "request.txt").read_bytes(), b"")
+
+    def test_mailbox_retries_a_transient_windows_sharing_violation(self):
+        import os
+        for name in ("request.txt", "response.txt", "lock"):
+            (self.root / name).write_bytes(b"0" if name == "lock" else b"")
+        original_replace = os.replace
+        attempts = []
+        def busy_once(source, destination):
+            attempts.append(destination)
+            if len(attempts) == 1:
+                raise PermissionError("Fusion has the request open")
+            return original_replace(source, destination)
+        with patch("live.os.replace", side_effect=busy_once):
+            staged = Mailbox(self.root).stage_beats("project", "timeline", [5, 20])
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(Mailbox(self.root).current()[0], staged["request_id"])
 
     def test_damaged_mailbox_returns_error_and_server_survives(self):
         for name in ("request.txt", "response.txt", "lock"):

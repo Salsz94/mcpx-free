@@ -121,7 +121,21 @@ def main():
                 run("MCPX_DIRECTORY=nil; MCPX_BRIDGE_SCRIPT=nil; MCPX_TEST_PROJECT=nil; MCPX_TEST_LIBRARY=nil")
                 run("dofile(" + json.dumps((ROOT / "worker.lua").as_posix()) + ")")
                 assert result(token) == "verified_in_timeline", "Fallo al compartir configuración entre scripts"
-                print("Consulta, montaje, repetición, audio ausente, marcador, colisión, reconexión y sesión compartida: OK")
+                req = client.call("request_beat_markers", **target, frames=[5, 25, 55])
+                run(dispatch)
+                beats = client.call("resolve_result", request_id=req["request_id"])
+                assert beats["status"] == "verified_beats" and beats["frames"] == [5, 25, 55]
+                run(dispatch)
+                assert client.call("resolve_result", request_id=req["request_id"])["marker_count"] == 3
+                req = client.call("request_markers")
+                run(dispatch)
+                actual = client.call("resolve_result", request_id=req["request_id"])
+                assert {5, 25, 55}.issubset({marker["frame"] for marker in actual["markers"]})
+                req = client.call("request_beat_markers", **target, frames=[4, 5])
+                run(dispatch)
+                assert client.call("resolve_result", request_id=req["request_id"])["status"] == "resolve_error"
+                run('assert(not resolve:GetProjectManager():GetCurrentProject():GetCurrentTimeline():GetMarkers()[4])')
+                print("Consulta, montaje, repetición, audio, marcadores, beats, colisión y reconexión: OK")
     finally:
         lua.lua_close(state)
 

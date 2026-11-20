@@ -40,6 +40,8 @@ class Server:
             self.add("export_fcpxml", "Write a new FCPXML for operator import into Resolve.",
                      schema(cuts=CUTS), lambda cuts: editor.export(cuts), False)
         if mailbox:
+            self.add("request_markers", "Read timeline markers for independent beat alignment verification.",
+                     schema(), lambda: mailbox.stage("markers"), False)
             self.add("request_timeline", "Queue a track-by-track timeline inspection and gap analysis.",
                      schema(), lambda: mailbox.stage("snapshot"), False)
             self.add("request_inspection", "Queue a Resolve read for operator dispatch.",
@@ -48,6 +50,11 @@ class Server:
                      schema(project_id=ID, timeline_id=ID, frame=FRAME),
                      lambda project_id, timeline_id, frame: mailbox.stage(
                          "marker", project_id, timeline_id, frame), False)
+            self.add("request_beat_markers", "Place and verify beat markers from an audio analysis in the armed test timeline.",
+                     schema(project_id=ID, timeline_id=ID, frames={
+                         "type": "array", "minItems": 1, "maxItems": 200,
+                         "items": FRAME}),
+                     lambda project_id, timeline_id, frames: mailbox.stage_beats(project_id, timeline_id, frames), False)
             self.add("resolve_result", "Read the latest response for a request ID.",
                      schema(request_id={"type": "string", "pattern": "^[0-9a-f]{32}$"}),
                      lambda request_id: mailbox.result(request_id), True)

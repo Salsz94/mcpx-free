@@ -55,6 +55,7 @@ function timeline:GetMarkers() return markers end
 function timeline:AddMarker(frame, color, name, note, duration, token)
     assert(not markers[frame], "duplicate marker")
     markers[frame] = {color=color,name=name,duration=duration,customData=token}
+    return true
 end
 function manager:GetCurrentProject() return project end
 function manager:GetCurrentDatabase() return {DbName="scratch"} end

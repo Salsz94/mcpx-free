@@ -108,3 +108,23 @@ Fusion SetData/GetData, conservando el arranque por consola. La simulación
 comprueba ahora una operación de marcador con esas variables globales ausentes.
 El acceso directo local MCPX Free.lnk abre el panel con pythonw. Ese acceso
 contiene rutas del equipo y queda excluido de Git.
+
+## Prueba del detector de beats del operador
+
+Se ejecutó el motor Python instalado del BeatDetector del operador con 30 fps y
+una ventana de 360 fotogramas. Se utilizaron sus 23 eventos de beat para ajustar
+siete cortes de un montaje de ocho tomas. El detector estimó 123 BPM. El montaje
+se importó en la biblioteca desechable. Un segundo par de consultas leyó los
+clips y marcadores y confirmó que los siete cortes pertenecen al conjunto de
+marcas y que la duración sigue siendo de 360 fotogramas. Se comprobó la
+reproducción por decodificación de una vista previa con 360 imágenes y audio.
+La selección visual y la preparación de los medios se realizaron mediante
+herramientas locales del agente.
+
+El servidor incorpora request_beat_markers y request_markers. Los lotes se
+validan completos antes de la primera escritura y se comprueban después.
+La simulación cubre repetición del ID y colisión sin escritura del resto del
+lote. Se corrigió una contención real al reemplazar request.txt mientras Fusion
+lo leía, con reintentos acotados. Pasaron once pruebas Python y la simulación.
+El detector del usuario se conserva como instalación local y su código y medios
+quedan fuera del repositorio público.

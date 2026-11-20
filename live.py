@@ -66,7 +66,15 @@ class Mailbox:
                 with temporary.open("xb") as stream:
                     stream.write(f"{request_id} {expires} {operation} {project} {timeline} {frame}\n".encode("ascii"))
                     stream.write(payload.encode("ascii"))
-                os.replace(temporary, self.path("request.txt"))
+                # Fusion may briefly open the slot without Windows delete sharing.
+                for attempt in range(20):
+                    try:
+                        os.replace(temporary, self.path("request.txt"))
+                        break
+                    except PermissionError:
+                        if attempt == 19:
+                            raise
+                        time.sleep(.025)
             finally:
                 temporary.unlink(missing_ok=True)
         return {"status": "pending_operator", "request_id": request_id, "expires_at": expires}
@@ -90,6 +98,16 @@ class Mailbox:
 
         return self.stage("assemble", project, timeline, editor.fps, prepare)
 
+    def stage_beats(self, project, timeline, frames):
+        if not isinstance(frames, list) or not 1 <= len(frames) <= 200:
+            raise ValueError("Se requieren entre 1 y 200 beats.")
+        for frame in frames:
+            integer(frame, 0, 10_000_000)
+        if frames != sorted(set(frames)):
+            raise ValueError("Los beats deben estar ordenados y sin duplicados.")
+        return self.stage("beats", project, timeline,
+                          prepare=lambda request_id: "".join(f"{frame}\n" for frame in frames))
+
     def read(self, request_id):
         if not isinstance(request_id, str) or not REQUEST_ID.fullmatch(request_id):
             raise ValueError("Identificador de solicitud inválido.")
@@ -109,6 +127,15 @@ class Mailbox:
             return None
         values = [bytes.fromhex(field.decode("ascii")).decode("utf-8", "replace")
                   for field in fields[2:-1]]
+        if fields[1] == b"ok" and values and values[0] == "markers":
+            if len(values) < 2 or (len(values) - 2) % 5:
+                raise ValueError("Lectura de marcadores incompleta.")
+            markers = []
+            for index in range(2, len(values), 5):
+                frame, color, name, duration, note = values[index:index + 5]
+                markers.append(dict(frame=int(frame), color=color, name=name,
+                                    duration=int(duration), note=note))
+            return dict(status="read_from_resolve", timeline_id=values[1], markers=markers)
         if fields[1] == b"ok" and values and values[0] == "snapshot":
             if len(values) < 6 or (len(values) - 6) % 8:
                 raise ValueError("Lectura de clips incompleta.")
@@ -122,6 +149,9 @@ class Mailbox:
                         clips=items, analysis=analyze(items))
         if fields[1] == b"error":
             return {"status": "resolve_error", "message": values[0]}
+        if fields[1] == b"ok" and len(values) == 4 and values[0] == "beats":
+            return {"status": "verified_beats", "timeline_id": values[1],
+                    "marker_count": int(values[2]), "frames": [int(frame) for frame in values[3].split(",")]}
         if fields[1] == b"ok" and len(values) == 3:
             return {"status": "verified_in_timeline", "timeline_id": values[0],
                     "frame": int(values[1]), "marker": values[2]}
