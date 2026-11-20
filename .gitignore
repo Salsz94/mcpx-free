@@ -1,0 +1,10 @@
+__pycache__/
+.scratch/
+.scratch-fixture/
+.venv/
+*.pyc
+.env
+.env.*
+.codex/
+.agents/
+*.log
