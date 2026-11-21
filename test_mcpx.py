@@ -12,6 +12,7 @@ from edit import Editor
 from live import Mailbox
 from smoke import Client
 from selection import align_to_beats
+from cleanup import build_plan, group_takes
 
 
 CUTS = [{"media": "B", "in": 60, "out": 180},
@@ -20,6 +21,23 @@ CUTS = [{"media": "B", "in": 60, "out": 180},
 
 
 class Fixture(TestCase):
+    def test_takes_cleanup_preserves_variants_and_quantizes_once(self):
+        first = {"source": 0, "start": .1, "end": 1.1, "text": "Esta es la frase original.",
+                 "timeline_time": .1, "timeline_end": 1.1, "confidence": .95}
+        duplicate = {**first, "start": 2.1, "end": 3.1, "timeline_time": 2.1, "timeline_end": 3.1}
+        groups = group_takes([first, duplicate], True)
+        self.assertEqual(groups[0]["selected_index"], 1)
+        variant = {**duplicate, "text": "Esta es la frase diferente."}
+        variants = group_takes([first, variant], True)
+        self.assertTrue(any(group["selected_index"] == -1 for group in variants)
+                        or len(variants) == 2)
+        source = {"fps": "30", "start_frame": 108000,
+                  "clips": [{"source_time": 0, "start": 108000, "end": 108150}]}
+        plan = build_plan(source, groups)
+        self.assertEqual(plan["segments"][0]["in"], 63)
+        self.assertEqual(plan["segments"][0]["frames"], 30)
+        self.assertEqual(plan["duration_frames"], 30)
+
     def test_beat_alignment_preserves_duration_and_uses_detector_positions(self):
         plan = {"fps": 30, "shots": [{"frames": 45}, {"frames": 45}, {"frames": 45}]}
         analysis = {"fps": 30, "events": [{"frame": 40}, {"frame": 80}, {"frame": 100}]}

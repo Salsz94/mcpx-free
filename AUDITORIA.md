@@ -1,5 +1,9 @@
 # Auditoría de factibilidad
 
+Actualización del 21 de noviembre de 2026. Los resultados actuales de pruebas
+reales y el trabajo pendiente están en [PRUEBAS_REALES.md](PRUEBAS_REALES.md).
+Las secciones siguientes conservan el historial y sus límites en cada fecha.
+
 ## Reutilización y correcciones posteriores
 
 Creative Editor se descargó y fijó al commit `1a5879173c59b736ddd9279b65e77e28037fa671`. Su licencia MIT se conserva en el repositorio. Se extrajo la función `analyze` y se conectó con una nueva lectura real de los clips por pista. El resultado de la prueba en Resolve Free 21.1.0.17 fue V1 con tres clips, A1 con tres clips y cero huecos o solapamientos.

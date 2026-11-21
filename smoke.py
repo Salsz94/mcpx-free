@@ -8,12 +8,13 @@ import sys
 
 
 class Client:
-    def __init__(self, options=()):
+    def __init__(self, options=(), stderr=None):
         self.command = [sys.executable, str(Path(__file__).with_name("server.py")), *options]
         self.sequence = 0
+        self.stderr = stderr
 
     def __enter__(self):
-        self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.stderr,
                                         text=True, encoding="utf-8")
         try:
             self.request("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},

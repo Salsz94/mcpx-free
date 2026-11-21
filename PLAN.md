@@ -1,5 +1,9 @@
 # MCPX-Free
 
+Actualización del 21 de noviembre de 2026. La auditoría ampliada, sus 21 casos
+reales y el siguiente desarrollo están en [PRUEBAS_REALES.md](PRUEBAS_REALES.md).
+Este documento conserva el plan inicial y su historial.
+
 Plan de desarrollo · 20 de noviembre de 2026 · Primera sesión prevista para el sábado 21 de noviembre
 
 La X es un guiño a X-Men. MCPX-Free será un proyecto independiente para montar videos en DaVinci Resolve Free desde Codex, Claude Desktop y otros clientes MCP locales. La primera plataforma es Windows con Resolve Free **21.1.0.17**.

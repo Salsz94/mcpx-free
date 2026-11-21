@@ -8,7 +8,7 @@ local line
 local payload = {}
 if request:GetFileSize() <= 262144 then
     line = request:ReadLine()
-    for index = 1, 201 do
+    for index = 1, 5001 do
         local row = request:ReadLine()
         if not row then break end
         payload[index] = row
@@ -100,6 +100,51 @@ local function execute()
     local project = assert(manager:GetCurrentProject(), "Open a project in Resolve first")
     local timeline = project:GetCurrentTimeline()
     local activeId = timeline and timeline:GetUniqueId() or ""
+    if operation == "audit" then
+        assert(project:GetUniqueId() == projectId and activeId == timelineId, "Project or timeline changed")
+        assert(testProject and project:GetName() == testProject
+            and testProject:match("^MCPX%-TEST%-[%w%-]+$")
+            and manager:GetCurrentDatabase().DbName == testLibrary, "Audit requires armed disposable project")
+        local script = assert(MCPX_BRIDGE_SCRIPT or app:GetData("MCPX.BridgeScript"))
+        assert(script:match("bridge%.lua$"), "Unexpected bridge entry point")
+        local probePath = script:gsub("bridge%.lua$", "audit_probe.lua")
+        local probe = dofile(probePath)
+        return probe(app, directory, manager, project, timeline, payload)
+    end
+    if operation == "audioapply" or operation == "audiocommit" then
+        assert(project:GetUniqueId() == projectId and activeId == timelineId, "Project or timeline changed")
+        local script = assert(MCPX_BRIDGE_SCRIPT or app:GetData("MCPX.BridgeScript"))
+        assert(script:match("bridge%.lua$"), "Unexpected bridge entry point")
+        local handlerPath = script:gsub("bridge%.lua$", "audio_edit.lua")
+        local handler = dofile(handlerPath)
+        return handler(app, directory, project, timeline, operation, payload)
+    end
+    if operation == "audioscan" then
+        assert(timeline and project:GetUniqueId() == projectId and activeId == timelineId, "Project or timeline changed")
+        local track = tonumber(frameText)
+        assert(track >= 1 and track <= timeline:GetTrackCount("audio"), "Audio track unavailable")
+        local offset = assert(tonumber(payload[1]))
+        assert(offset >= 0 and offset == math.floor(offset), "Invalid page offset")
+        local items = timeline:GetItemListInTrack("audio", track) or {}
+        table.sort(items, function(a, b) return a:GetStart() < b:GetStart() end)
+        local fields = {"audio", projectId, activeId, timeline:GetSetting("timelineFrameRate"),
+            timeline:GetStartFrame(), track, timeline:GetTrackSubType("audio", track),
+            #items, offset}
+        for index = offset + 1, math.min(offset + 40, #items) do
+            local item = items[index]
+            local media = assert(item:GetMediaPoolItem(), "Audio item has no source media")
+            local ok, sourceTime = pcall(function() return item:GetSourceStartTime() end)
+            if not ok or type(sourceTime) ~= "number" then
+                sourceTime = item:GetSourceStartFrame() / tonumber(timeline:GetSetting("timelineFrameRate"))
+            end
+            local speedOk, speed = pcall(function() return item:GetSpeed() end)
+            local percentage = speedOk and type(speed) == "table" and speed.Percentage or 100
+            for _, value in ipairs({item:GetUniqueId(), media:GetUniqueId(),
+                media:GetClipProperty("File Path"), item:GetStart(), item:GetEnd(),
+                sourceTime, percentage}) do fields[#fields + 1] = value end
+        end
+        return fields
+    end
     if operation == "inspect" then
         local fields = {resolveApp:GetProductName(), resolveApp:GetVersionString(),
             project:GetName(), project:GetUniqueId(), activeId}

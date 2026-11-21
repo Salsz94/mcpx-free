@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 from pathlib import Path
 import os
+import json
 import re
 import time
 import uuid
@@ -13,6 +14,18 @@ from vendor.creative_editor.analysis import analyze
 
 IDENTIFIER = re.compile(r"[A-Za-z0-9_-]{1,100}")
 REQUEST_ID = re.compile(r"[0-9a-f]{32}")
+
+
+def replace_file(source, destination):
+    # Fusion and Python readers can briefly hold a file without delete sharing.
+    for attempt in range(20):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(.025)
 
 
 class Mailbox:
@@ -66,15 +79,7 @@ class Mailbox:
                 with temporary.open("xb") as stream:
                     stream.write(f"{request_id} {expires} {operation} {project} {timeline} {frame}\n".encode("ascii"))
                     stream.write(payload.encode("ascii"))
-                # Fusion may briefly open the slot without Windows delete sharing.
-                for attempt in range(20):
-                    try:
-                        os.replace(temporary, self.path("request.txt"))
-                        break
-                    except PermissionError:
-                        if attempt == 19:
-                            raise
-                        time.sleep(.025)
+                replace_file(temporary, self.path("request.txt"))
             finally:
                 temporary.unlink(missing_ok=True)
         return {"status": "pending_operator", "request_id": request_id, "expires_at": expires}
@@ -127,6 +132,34 @@ class Mailbox:
             return None
         values = [bytes.fromhex(field.decode("ascii")).decode("utf-8", "replace")
                   for field in fields[2:-1]]
+        if fields[1] == b"ok" and values and values[0] == "probe":
+            if len(values) % 2:
+                raise ValueError("Informe de prueba incompleto.")
+            return {"status": "probe_result", "action": values[1],
+                    "evidence": dict(zip(values[2::2], values[3::2]))}
+        if fields[1] == b"ok" and len(values) == 7 and values[0] == "cleanup":
+            return {"status": "cleanup_" + values[6], "job_id": values[1],
+                    "track": int(values[2]), "completed_segments": int(values[3]),
+                    "total_segments": int(values[4]), "end_frame": int(values[5])}
+        if fields[1] == b"ok" and values and values[0] == "audio":
+            if len(values) < 9 or (len(values) - 9) % 7:
+                raise ValueError("Página de audio incompleta.")
+            clips = []
+            for index in range(9, len(values), 7):
+                clip_id, media_id, path, start, end, source_time, speed = values[index:index + 7]
+                clips.append(dict(id=clip_id, media_id=media_id, path=path, start=int(start),
+                                  end=int(end), source_time=float(source_time), speed=float(speed)))
+            result = dict(status="read_from_resolve", project_id=values[1], timeline_id=values[2],
+                          fps=values[3], start_frame=int(values[4]), track=int(values[5]),
+                          track_type=values[6], total=int(values[7]), offset=int(values[8]), clips=clips)
+            archive = self.directory / ("audio-snapshot-" + request_id + ".json")
+            if not archive.exists():
+                try:
+                    with archive.open("x", encoding="utf-8") as output:
+                        json.dump(result, output, ensure_ascii=False)
+                except FileExistsError:
+                    pass
+            return result
         if fields[1] == b"ok" and values and values[0] == "markers":
             if len(values) < 2 or (len(values) - 2) % 5:
                 raise ValueError("Lectura de marcadores incompleta.")

@@ -1,9 +1,14 @@
 # MCPX-Free
 
-Puente experimental para Windows. Se comprobó el montaje desde una conversación
-de Codex en Resolve Free 21.1.0.17, con Python 3.10 de 64 bits y medios
-sintéticos a 30 fps. El usuario confirmó la lectura del montaje después de
-reabrir el proyecto. Siguen pendientes Claude, el render y los medios habituales.
+**Versión 1.1.0 · experimental.** [Descargas y versiones](https://github.com/Salsz94/mcpx-free/releases)
+· [Historial de cambios](CHANGELOG.md). Consulte la versión instalada con
+`python server.py --version`. El servidor también comunica su versión al cliente MCP.
+
+Puente experimental para Windows. Se comprobó el recorrido MCP y Lua en
+Resolve Free 21.1.0.17 con Python de 64 bits, material real de producto y
+locución controlada a 30 fps. El registro [PRUEBAS_REALES.md](PRUEBAS_REALES.md)
+separa los flujos disponibles por MCP de las operaciones probadas mediante
+sondas técnicas. Claude y otras versiones de Resolve siguen pendientes.
 
 ## Selección de tomas por el agente
 
@@ -34,6 +39,9 @@ herramientas locales. La integración del análisis y preparación como herramie
 MCP específicas sigue pendiente. Conserve los clips preparados que utiliza la
 timeline y guarde el proyecto desde Resolve.
 
+En este flujo visual los clips de la timeline apuntan a los medios preparados.
+Conserve también el plan y los videos originales para regenerar otros rangos.
+
 ## Montaje sobre beats de un detector local
 
 Para usar un BeatDetector instalado por el operador, ejecute su motor sobre la
@@ -56,9 +64,61 @@ y proyecto de pruebas armados.
 Se comprobó un montaje de 12 segundos con ocho tomas, 23 marcas del detector y
 siete cambios de plano coincidentes con sus marcas. Los extremos del montaje
 delimitan la duración solicitada. El tempo es una estimación del detector.
+La auditoría también montó 24 tomas con un corte en cada uno de los 23 beats
+interiores y comparó todos sus inicios con una lectura independiente de las marcas.
 Reinicie el cliente MCP tras actualizar el servidor para descubrir herramientas
 añadidas. Una escritura de marcas parcialmente completada se puede volver a
 despachar con el mismo ID para verificar las existentes y completar el lote.
+
+## Limpieza de locución controlada desde Codex
+
+El flujo experimental lee una pista de audio de la timeline, transcribe los
+medios localmente y prepara intervalos de voz. Requiere `faster-whisper` y el
+modelo `base` descargado en `.scratch/models` del repositorio. El análisis
+usa CPU e int8 y requiere el modelo disponible localmente. No lo descarga
+durante una consulta MCP.
+
+Preparación opcional del transcriptor, ejecutada una vez por el operador con
+acceso a Internet para obtener el modelo:
+
+```powershell
+python -m pip install faster-whisper
+python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8', download_root='.scratch/models')"
+```
+
+1. Consulte `request_inspection` para obtener los IDs vigentes.
+2. Lea la pista con `request_audio_page(project_id, timeline_id, track, offset)`.
+   Cada página contiene hasta 40 clips. Consulte `resolve_result` para archivarla
+   y continúe hasta completar `total`.
+3. Use `start_takes_analysis(snapshot_ids, language, remove_duplicates, silence_ms)`.
+   `snapshot_ids` contiene los IDs de todas las páginas. Idiomas disponibles
+   `es` y `en`, silencio entre 300 y 5000 ms.
+4. Consulte `review_takes_analysis(job_id, offset, limit)` hasta obtener `ready`.
+   Revise texto, rangos, duración prevista y grupos de tomas.
+5. Use `choose_take(job_id, group_id, selected_index)` para elegir una variante.
+   El índice empieza en cero. `-1` conserva todas las alternativas del grupo.
+6. Llame a `request_apply_takes(job_id)` y lea su resultado. Repita el mismo
+   trabajo mientras devuelva `cleanup_building`, hasta `cleanup_verified`.
+   Se construyen hasta 25 segmentos por solicitud en una pista nueva silenciada.
+7. Después de revisar, `request_activate_takes(job_id, mute_tracks)` vuelve a
+   verificar la pista, la activa y silencia la pista de origen junto con las
+   pistas adicionales indicadas.
+
+Los fragmentos permanecen enlazados al medio original y conservan propiedades
+de audio. Se aplica un fundido de un fotograma donde la longitud lo permite.
+La construcción valida los IDs y rangos de los clips de origen. Repetir el
+mismo trabajo verifica y continúa su pista identificada.
+
+La selección automática conserva la última repetición textual exacta cuando
+ambas transcripciones tienen suficiente confianza. Las variantes similares
+se mantienen para revisión. La calidad interpretativa requiere escucha y criterio
+del editor. El umbral de silencio también configura el detector de voz.
+
+Esta versión admite pistas mono o estéreo, clips sin solapamientos y velocidad
+100 %, con un máximo de 2000 segmentos. Las escrituras están habilitadas en el
+proyecto desechable armado. Los proyectos habituales exigen autorización acotada
+al proyecto, timeline y trabajo. El panel todavía necesita una interfaz para
+concederla. La integración con el script externo «Limpiar Tomas» sigue pendiente.
 
 ## Panel y activación desde el menú
 
@@ -232,7 +292,8 @@ Para la ruta manual, use `export_fcpxml`, abra **File → Import → Timeline** 
 ## Repetición y recuperación
 
 La inspección admite respuestas de hasta 256 KiB. Una respuesta mayor devuelve
-un error explícito. La paginación de timelines extensas queda pendiente.
+un error explícito. El audio dispone de páginas de 40 clips. La inspección
+general de timelines extensas todavía necesita paginación.
 
 - El buzón mantiene una solicitud a la vez y el resultado más reciente. Lea la respuesta antes de publicar otra. Si vence el plazo de dos minutos, revise el estado de Resolve antes de solicitar otra edición.
 - Mientras la solicitud sigue vigente, repetir el despacho de un montaje busca la timeline por su nombre ligado al ID y verifica sus clips. Una nueva solicitud recibe un ID distinto y crea otra timeline. Un marcador existente de otro ID bloquea la escritura.
